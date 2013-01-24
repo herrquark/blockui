@@ -11,8 +11,8 @@
  *
  * Thanks to Amir-Hossein Sobhi for some excellent contributions!
  */
-;(function() {
-//"use strict";
+;(function($, window, document, undefined) {
+"use strict";
 
 	function setup($) {
 		$.fn._fadeIn = $.fn.fadeIn;
@@ -20,13 +20,6 @@
 
 		var noOp = $.noop || function() {};
         var filterEvents = 'mousedown mouseup keydown keypress keyup touchstart touchend touchmove'.replace(/ |$/g, eventNamespace+"$&"); // add namespace to each event
-
-
-		// this bit is to ensure we don't call setExpression when we shouldn't (with extra muscle to handle
-		// retarded userAgent strings on Vista)
-		var msie = /MSIE/.test(navigator.userAgent);
-		var mode = document.documentMode || 0;
-		var setExpr = $.isFunction( document.createElement('div').style.setExpression );
 
 		// global $ methods for blocking/unblocking the entire page
 		$.blockUI   = function(opts) { install(window, opts); };
@@ -301,14 +294,14 @@
 				pageBlock = messageLayer[0];
 				pageBlockEls = $(':input:enabled:visible',pageBlock);
 				if (opts.focusInput)
-					setTimeout(focus, 20);
+					window.setTimeout(focus, 20);
 			}
             
             center(messageLayer, opts.centerX, opts.centerY, full);
 
 			if (opts.timeout) {
 				// auto-unblock
-				var to = setTimeout(function() {
+				var to = window.setTimeout(function() {
 					if (full)
 						$.unblockUI(opts);
 					else
@@ -325,7 +318,7 @@
 			var data = $el.data('blockUI.history');
 			var to = $el.data('blockUI.timeout');
 			if (to) {
-				clearTimeout(to);
+				window.clearTimeout(to);
 				$el.removeData('blockUI.timeout');
 			}
 			opts = $.extend({}, $.blockUI.defaults, opts || {});
@@ -355,7 +348,7 @@
 
 			if (opts.fadeOut) {
 				els.fadeOut(opts.fadeOut);
-				setTimeout(function() { reset(els,data,opts,el); }, opts.fadeOut);
+				window.setTimeout(function() { reset(els,data,opts,el); }, opts.fadeOut);
 			}
 			else
 				reset(els, data, opts, el);
@@ -442,7 +435,7 @@
 					var fwd = !e.shiftKey && e.target === els[els.length-1];
 					var back = e.shiftKey && e.target === els[0];
 					if (fwd || back) {
-						setTimeout(function(){focus(back);},10);
+						window.setTimeout(function(){focus(back);},10);
 						return false;
 					}
 				}
@@ -490,7 +483,7 @@
 	if (typeof define === 'function' && define.amd && define.amd.jQuery) {
 		define(['jquery'], setup);
 	} else {
-		setup(jQuery);
+		setup($);
 	}
 
-})();
+})($, window, document);
