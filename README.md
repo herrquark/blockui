@@ -1,7 +1,7 @@
 jQuery BlockUI Plugin
 =======
 
-This is a simple revamp of BlockUI plugin which concentrates on the one task: **block modern user interface**
+This is a simple revamp of BlockUI plugin which concentrates on one simple task: **block modern user interface**
 
 ___
 
