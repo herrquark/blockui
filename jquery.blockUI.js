@@ -1,7 +1,7 @@
 /*!
  * jQuery blockUI plugin
- * Version 2.55.0-2013.01.22
- * @requires jQuery v1.7 or later
+ * Version 2.66.0-2013.10.09
+ * Requires jQuery v1.7 or later
  *
  * Examples at: http://malsup.com/jquery/block/
  * Copyright (c) 2007-2013 M. Alsup
@@ -12,6 +12,7 @@
  * Thanks to Amir-Hossein Sobhi for some excellent contributions!
  */
 ;(function($, window, document, undefined) {
+/*jshint eqeqeq:false curly:false latedef:false */
 "use strict";
 
 	function setup($) {
@@ -21,12 +22,23 @@
 		var noOp = $.noop || function() {};
         var filterEvents = 'mousedown mouseup keydown keypress keyup touchstart touchend touchmove'.replace(/ |$/g, eventNamespace+"$&"); // add namespace to each event
 
+		// this bit is to ensure we don't call setExpression when we shouldn't (with extra muscle to handle
+		// confusing userAgent strings on Vista)
+		var msie = /MSIE/.test(navigator.userAgent);
+		var ie6  = /MSIE 6.0/.test(navigator.userAgent) && ! /MSIE 8.0/.test(navigator.userAgent);
+		var mode = document.documentMode || 0;
+		var setExpr = $.isFunction( document.createElement('div').style.setExpression );
+
 		// global $ methods for blocking/unblocking the entire page
 		$.blockUI   = function(opts) { install(window, opts); };
 		$.unblockUI = function(opts) { remove(window, opts); };
 
 		// plugin method for blocking element content
 		$.fn.block = function(opts) {
+			if ( this[0] === window ) {
+				$.blockUI( opts );
+				return this;
+			}
 			var fullOpts = $.extend({}, $.blockUI.defaults, opts || {});
 			this.each(function() {
 				var $el = $(this);
@@ -47,12 +59,16 @@
 
 		// plugin method for unblocking element content
 		$.fn.unblock = function(opts) {
+			if ( this[0] === window ) {
+				$.unblockUI( opts );
+				return this;
+			}
 			return this.each(function() {
 				remove(this, opts);
 			});
 		};
 
-		$.blockUI.version = 2.55; // 2nd generation blocking at no extra cost!
+		$.blockUI.version = 2.66; // 2nd generation blocking at no extra cost!
 
 		// override these in your code to change the default behavior and style
 		$.blockUI.defaults = {
@@ -123,6 +139,9 @@
 			// if true, focus will be placed in the first available input field when
 			// page blocking
 			focusInput: true,
+
+            // elements that can receive focus
+            focusableElements: ':input:enabled:visible',
 
 			// suppresses the use of overlay styles on FF/Linux (due to performance issues with opacity)
 			// no longer needed in 2012
@@ -220,7 +239,7 @@
 				s = '<div class="blockUI ' + opts.blockMsgClass + ' blockElement ui-dialog ui-widget ui-corner-all" style="z-index:'+(z+10)+';display:none;position:absolute">';
 				if ( opts.title ) {
 					s += '<div class="ui-widget-header ui-dialog-titlebar ui-corner-all blockTitle">'+(opts.title || '&nbsp;')+'</div>';
-				}  
+				}
 				s += '<div class="ui-widget-content ui-dialog-content"></div>';
 				s += '</div>';
 			}
@@ -292,7 +311,7 @@
 
 			if (full) {
 				pageBlock = messageLayer[0];
-				pageBlockEls = $(':input:enabled:visible',pageBlock);
+				pageBlockEls = $(opts.focusableElements,pageBlock);
 				if (opts.focusInput)
 					window.setTimeout(focus, 20);
 			}
@@ -313,6 +332,7 @@
 
 		// remove the block
 		function remove(el, opts) {
+			var count;
 			var full = (el == window);
 			var $el = $(el);
 			var data = $el.data('blockUI.history');
@@ -347,8 +367,11 @@
 				pageBlock = pageBlockEls = null;
 
 			if (opts.fadeOut) {
-				els.fadeOut(opts.fadeOut);
-				window.setTimeout(function() { reset(els,data,opts,el); }, opts.fadeOut);
+				count = els.length;
+				els.stop().fadeOut(opts.fadeOut, function() {
+					if ( --count === 0)
+						reset(els,data,opts,el);
+				});
 			}
 			else
 				reset(els, data, opts, el);
@@ -357,6 +380,9 @@
 		// move blocking element back into the DOM where it started
 		function reset(els,data,opts,el) {
 			var $el = $(el);
+			if ( $el.data('blockUI.isBlocked') )
+				return;
+
 			els.each(function(i,o) {
 				// remove via DOM calls so we don't lose event handlers
 				if (this.parentNode)
@@ -429,7 +455,7 @@
 		// event handler to suppress keyboard/mouse events when blocking
 		function handler(e) {
 			// allow tab navigation (conditionally)
-			if (e.keyCode && e.keyCode == 9) {
+			if (e.type === 'keydown' && e.keyCode && e.keyCode == 9) {
 				if (pageBlock && e.data.constrainTabKey) {
 					var els = pageBlockEls;
 					var fwd = !e.shiftKey && e.target === els[els.length-1];
@@ -443,7 +469,7 @@
 			var opts = e.data;
 			var target = $(e.target);
 			if (target.hasClass('blockOverlay') && opts.onOverlayClick)
-				opts.onOverlayClick();
+				opts.onOverlayClick(e);
 
 			// allow events within the message content
 			if (target.parents('div.' + opts.blockMsgClass).length > 0)
